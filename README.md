@@ -47,7 +47,14 @@ inmarket-ai-builder-challenge/
 │   ├── server.py          # MCP server implementation
 │   ├── requirements.txt   # Dependencies
 │   └── README.md          # Documentation
-└── frontend/              # Frontend (placeholder)
+└── frontend/              # React Frontend (Executive UI)
+    ├── src/
+    │   ├── App.jsx        # Main application component
+    │   ├── components/    # React components
+    │   └── index.css      # Global styles
+    ├── package.json       # Node dependencies
+    ├── vite.config.js     # Vite configuration
+    └── README.md          # Frontend documentation
 ```
 
 ## 🚀 Quick Start
@@ -55,32 +62,85 @@ inmarket-ai-builder-challenge/
 ### Prerequisites
 
 - Python 3.10 or higher
+- Node.js 16+ (for frontend)
 - OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
 - OpenWeatherMap API key ([Get one here](https://openweathermap.org/api))
 
 ### Installation
 
-1. **Clone and navigate to the project:**
+1. **Clone the repository:**
 ```bash
-cd backend-agent
+git clone https://github.com/DarshanHari19/AIBuilderChallenge-InMarket-.git
+cd AIBuilderChallenge-InMarket-
 ```
 
-2. **Run the setup script:**
+2. **Install Python dependencies:**
 ```bash
-./setup.sh
+# Install MCP Server dependencies
+cd mcp-server
+pip install -r requirements.txt
+
+# Install Backend Agent dependencies
+cd ../backend-agent
+pip install -r requirements.txt
+```
+
+Or use the automated setup script:
+```bash
+cd backend-agent
+bash setup.sh
 ```
 
 3. **Configure API keys:**
-Edit `backend-agent/.env`:
+
+Create `.env` files (or copy from `.env.example`):
+
+Backend Agent - `backend-agent/.env`:
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
 OPENWEATHER_API_KEY=your_openweather_api_key_here
 OPENAI_MODEL=gpt-4o
 ```
 
-### Running the System
+PORT=8000
+```
 
-**Start the backend agent:**
+MCP Server - `mcp-server/.env`:
+```bash
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+```
+
+4. **Install frontend dependencies:**
+```bash
+cd ../frontend
+npm install
+```
+
+---
+
+## 🚀 Running the System
+
+### Option 1: Docker (Recommended for Production)
+
+**One-command deployment:**
+```bash
+# Make sure .env files are configured first!
+docker-compose up --build
+```
+
+Services will be available at:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- Health Check: http://localhost:8000/health
+
+**Stop services:**
+```bash
+docker-compose down
+```
+
+### Option 2: Manual Setup (Development)
+
+**1. Start the backend agent:**
 ```bash
 cd backend-agent
 python agent.py
@@ -88,7 +148,52 @@ python agent.py
 
 The API will be available at `http://localhost:8000`
 
-### Testing
+**2. Start the frontend (in a new terminal):**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000`
+
+---
+
+## 🧪 Testing
+
+### Comprehensive Test Suite
+
+**Run all tests:**
+```bash
+# From project root
+bash run_tests.sh
+```
+
+Or test individually:
+
+**Backend tests:**
+```bash
+cd backend-agent
+pytest test_comprehensive.py -v
+```
+
+**MCP server tests:**
+```bash
+cd mcp-server
+pytest test_comprehensive.py -v
+```
+
+**Test categories:**
+- `pytest -m unit` - Fast unit tests (default)
+- `pytest -m integration` - Integration tests (requires real API keys)
+- `pytest -m performance` - Performance tests
+
+**Coverage report:**
+```bash
+pytest --cov=. --cov-report=html
+```
+
+### Legacy Interactive Testing
 
 **Run automated tests:**
 ```bash
@@ -152,6 +257,26 @@ A LangChain-powered AI agent that acts as a Strategic Business Travel Assistant.
 - Provides packing recommendations
 - Advises on optimal travel timing
 - Warns about weather-related risks
+
+### 3. Frontend (`frontend/`)
+
+An executive-grade React interface for the Strategic Travel Assistant.
+
+**Features:**
+- ✅ Premium Indigo/Slate dark theme with glass morphism
+- ✅ Rich markdown rendering for formatted responses
+- ✅ System Reasoning accordion showing tool calls
+- ✅ Visual Risk Meter (Low/Moderate/High)
+- ✅ Real-time chat with auto-scroll
+- ✅ Multi-city query support
+
+**Tech Stack:**
+- React 18 with Vite
+- Tailwind CSS + Typography plugin
+- Axios for API communication
+- ReactMarkdown for response formatting
+
+**See:** [Frontend README](frontend/README.md) for detailed setup and features
 
 ## 📚 API Documentation
 
@@ -240,6 +365,9 @@ python agent.py
 
 - [Backend Agent README](backend-agent/README.md) - Detailed agent documentation
 - [MCP Server README](mcp-server/README.md) - Weather server documentation
+- [Frontend README](frontend/README.md) - React UI setup and features
+- [PROMPTS.md](PROMPTS.md) - Complete development journey and prompts
+- [EXECUTIVE_FEATURES.md](frontend/EXECUTIVE_FEATURES.md) - Advanced UI features guide
 
 ## 🔍 Troubleshooting
 
@@ -261,10 +389,11 @@ python agent.py
 
 ## 🎯 Next Steps
 
-1. **Frontend Integration**: Create a React/Vue frontend in the `frontend/` directory
-2. **Session Management**: Add conversation history and context
+1. ✅ **Frontend Integration**: Executive-grade React UI completed
+2. **Session Management**: Add persistent conversation history
 3. **More Tools**: Extend with flight search, hotel booking, etc.
 4. **Deployment**: Deploy to AWS/GCP/Azure with Docker
+5. **Authentication**: Add user authentication and API rate limiting
 
 ## 📄 License
 

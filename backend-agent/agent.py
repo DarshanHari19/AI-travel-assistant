@@ -8,9 +8,6 @@ import os
 import sys
 import logging
 from typing import Annotated
-from dotenv import load_dotenv
-
-load_dotenv()
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -21,13 +18,24 @@ from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
 
+# Import secure configuration
+from config import config, mask_api_key
+
 # Add mcp-server directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'mcp-server'))
 from server import get_weather_forecast, WeatherForecastResponse, ErrorResponse
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=getattr(logging, config.LOG_LEVEL if config else "INFO"),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
+# Validate configuration on startup
+if not config:
+    logger.critical("Configuration failed to load. Check your .env file.")
+    raise RuntimeError("Failed to load configuration. See logs for details.")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -35,21 +43,17 @@ app = FastAPI(
     description="AI agent that provides travel advice using weather forecasts",
     version="1.0.0"
 )
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Allows your React dev server to connect
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-# Environment configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
-
-# Validate configuration
-if not OPENAI_API_KEY:
-    logger.warning("OPENAI_API_KEY not set. Agent will not function properly.")
+# Add CORS middleware with configurable origins
+if config.ENABLE_CORS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=config.ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.info(f"CORS enabled for origins: {config.ALLOWED_ORIGINS}")
 
 
 # ============================================================================
@@ -176,9 +180,9 @@ def create_travel_agent():
     """
     # Initialize ChatOpenAI model
     llm = ChatOpenAI(
-        model=OPENAI_MODEL,
+        model=config.OPENAI_MODEL,
         temperature=0.5,  # Lower temperature for more consistent tool usage
-        api_key=OPENAI_API_KEY,
+        api_key=config.OPENAI_API_KEY,
         model_kwargs={"top_p": 0.9}
     )
     
@@ -338,14 +342,14 @@ async def health_check():
     health_status = {
         "status": "healthy",
         "components": {
-            "openai_api_key": "configured" if OPENAI_API_KEY else "missing",
-            "openweather_api_key": "configured" if os.getenv("OPENWEATHER_API_KEY") else "missing",
-            "model": OPENAI_MODEL
+            "openai_api_key": mask_api_key(config.OPENAI_API_KEY),
+            "openweather_api_key": mask_api_key(config.OPENWEATHER_API_KEY),
+            "model": config.OPENAI_MODEL
         }
     }
     
     # Check if critical components are missing
-    if not OPENAI_API_KEY or not os.getenv("OPENWEATHER_API_KEY"):
+    if not config.OPENAI_API_KEY or not config.OPENWEATHER_API_KEY:
         health_status["status"] = "degraded"
         health_status["warning"] = "Some API keys are not configured"
     
@@ -359,13 +363,12 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     
-    port = int(os.getenv("PORT", "8000"))
-    
-    logger.info(f"Starting Strategic Business Travel Assistant on port {port}")
+    logger.info(f"Starting Strategic Business Travel Assistant on port {config.PORT}")
+    logger.info(f"Configuration: {config}")
     
     uvicorn.run(
         app,
-        host="0.0.0.0",
-        port=port,
-        log_level="info"
+        host=config.HOST,
+        port=config.PORT,
+        log_level=config.LOG_LEVEL.lower()
     )

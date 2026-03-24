@@ -6,25 +6,49 @@ import ReactMarkdown from 'react-markdown';
 const calculateRiskLevel = (content) => {
   const lowerContent = content.toLowerCase();
   
-  // High risk indicators
-  if (lowerContent.includes('severe') || 
-      lowerContent.includes('dangerous') || 
-      lowerContent.includes('extreme') ||
-      lowerContent.includes('significant delays') ||
-      lowerContent.includes('heavy storm')) {
-    return { level: 'HIGH', color: 'from-red-500 to-red-600', bgColor: 'bg-red-500/10', textColor: 'text-red-400' };
+  // Check for explicit low-risk phrases first (these override keyword matching)
+  const lowRiskPhrases = [
+    'no delays', 'unlikely to experience delays', 'delays are unlikely',
+    'should not be concerned', 'should not worry', 'smooth sailing',
+    'no significant', 'minimal risk', 'favorable conditions',
+    'clear skies', 'good weather', 'excellent conditions',
+    'should have no issues', 'no weather-related concerns'
+  ];
+  
+  for (const phrase of lowRiskPhrases) {
+    if (lowerContent.includes(phrase)) {
+      return { level: 'LOW', color: 'from-green-500 to-emerald-500', bgColor: 'bg-green-500/10', textColor: 'text-green-400' };
+    }
   }
   
-  // Medium risk indicators
-  if (lowerContent.includes('delay') || 
-      lowerContent.includes('storm') || 
-      lowerContent.includes('wind') ||
-      lowerContent.includes('rain') ||
-      lowerContent.includes('moderate risk')) {
-    return { level: 'MODERATE', color: 'from-yellow-500 to-orange-500', bgColor: 'bg-yellow-500/10', textColor: 'text-yellow-400' };
+  // High risk indicators (specific negative conditions)
+  const highRiskPhrases = [
+    'severe', 'dangerous', 'extreme', 'significant delays',
+    'heavy storm', 'major delays', 'flight cancellations',
+    'do not travel', 'strongly advise against', 'hazardous'
+  ];
+  
+  for (const phrase of highRiskPhrases) {
+    if (lowerContent.includes(phrase)) {
+      return { level: 'HIGH', color: 'from-red-500 to-red-600', bgColor: 'bg-red-500/10', textColor: 'text-red-400' };
+    }
   }
   
-  // Low risk (good conditions)
+  // Medium risk indicators (check for concerning patterns without negative context)
+  const moderateRiskPhrases = [
+    'possible delays', 'may experience delays', 'could cause delays',
+    'moderate risk', 'some delays', 'potential for delays',
+    'heavy rain', 'strong winds', 'stormy conditions',
+    'consider delays', 'expect some delays'
+  ];
+  
+  for (const phrase of moderateRiskPhrases) {
+    if (lowerContent.includes(phrase)) {
+      return { level: 'MODERATE', color: 'from-yellow-500 to-orange-500', bgColor: 'bg-yellow-500/10', textColor: 'text-yellow-400' };
+    }
+  }
+  
+  // Default to LOW if no specific risk indicators found
   return { level: 'LOW', color: 'from-green-500 to-emerald-500', bgColor: 'bg-green-500/10', textColor: 'text-green-400' };
 };
 
