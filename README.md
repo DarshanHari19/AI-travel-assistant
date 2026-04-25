@@ -1,6 +1,23 @@
-# InMarket AI Builder Challenge
+# AI Travel Assistant 🌍✈️
 
-A complete AI-powered travel assistant system using Model Context Protocol (MCP), LangChain, and OpenWeatherMap API.
+![Tests](https://github.com/DarshanHari19/AI-travel-assistant/actions/workflows/main.yml/badge.svg)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
+[![PostgreSQL](https://img.shields.io/badge/postgresql-16-blue.svg)](https://www.postgresql.org/)
+[![LangChain](https://img.shields.io/badge/🦜_LangChain-equipped-green.svg)](https://python.langchain.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a393.svg)](https://fastapi.tiangolo.com/)
+
+A production-ready AI-powered travel assistant with real-time weather data, flight tracking, and intelligent travel recommendations. Built with LangChain, GPT-4, PostgreSQL, and automated testing via GitHub Actions.
+
+## ✨ Features
+
+- 🤖 **GPT-4 Powered**: Intelligent conversation using LangChain ReAct agents
+- 🌤️ **Real-time Weather**: Live weather forecasts via OpenWeatherMap API
+- ✈️ **Flight Tracking**: Real-time flight status from AeroDataBox (RapidAPI)
+- 💾 **PostgreSQL Persistence**: Conversation memory across server restarts
+- 🧪 **Automated Testing**: 18 comprehensive tests with GitHub Actions CI/CD
+- 🔒 **Production Security**: Rate limiting, CORS protection, API key masking
+- 📊 **RAG Integration**: FAISS vector store for travel knowledge retrieval
+- 🎨 **Modern UI**: React frontend with Tailwind CSS
 
 ## 🏗️ Architecture
 
@@ -61,45 +78,60 @@ inmarket-ai-builder-challenge/
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - Node.js 16+ (for frontend)
+- PostgreSQL 16+ (for conversation persistence)
 - OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
 - OpenWeatherMap API key ([Get one here](https://openweathermap.org/api))
+- AeroDataBox API key (optional - [RapidAPI](https://rapidapi.com/aerodatabox/api/aerodatabox))
 
 ### Installation
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/DarshanHari19/AIBuilderChallenge-InMarket-.git
-cd AIBuilderChallenge-InMarket-
+git clone https://github.com/DarshanHari19/AI-travel-assistant.git
+cd AI-travel-assistant
 ```
 
-2. **Install Python dependencies:**
+2. **Set up PostgreSQL (One-command setup):**
 ```bash
-# Install MCP Server dependencies
-cd mcp-server
-pip install -r requirements.txt
+./setup_postgres.sh
+```
 
-# Install Backend Agent dependencies
-cd ../backend-agent
+This creates a PostgreSQL 16 Docker container with the `travel_assistant` database.
+
+Or install PostgreSQL manually: See [POSTGRESQL_SETUP.md](POSTGRESQL_SETUP.md)
+
+3. **Install Python dependencies:**
+```bash
+cd backend-agent
 pip install -r requirements.txt
 ```
 
 Or use the automated setup script:
 ```bash
-cd backend-agent
 bash setup.sh
 ```
 
-3. **Configure API keys:**
+4. **Configure API keys:**
 
-Create `.env` files (or copy from `.env.example`):
+Create `.env` file in `backend-agent/` (or copy from `.env.example`):
 
-Backend Agent - `backend-agent/.env`:
 ```bash
+# OpenAI Configuration
 OPENAI_API_KEY=your_openai_api_key_here
-OPENWEATHER_API_KEY=your_openweather_api_key_here
 OPENAI_MODEL=gpt-4o
+
+# Weather API
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+
+# Flight API (optional - uses mock data if not set)
+AERODATABOX_API_KEY=your_rapidapi_key_here
+
+# PostgreSQL Configuration
+POSTGRES_URI=postgresql://postgres:postgres@localhost:5432/travel_assistant
+POSTGRES_POOL_SIZE=10
+POSTGRES_MAX_OVERFLOW=20
 ```
 
 PORT=8000
@@ -161,39 +193,48 @@ The frontend will be available at `http://localhost:3000`
 
 ## 🧪 Testing
 
-### Comprehensive Test Suite
+### Automated CI/CD Pipeline
+
+Every push to `main` triggers automated testing via **GitHub Actions**:
+
+- ✅ **18 comprehensive tests** across all components
+- ✅ **PostgreSQL 16** service container for integration tests
+- ✅ **Python 3.11** environment with cached dependencies
+- ✅ **API keys** securely injected from GitHub Secrets
+- ✅ **Status badge** shows real-time test results
+
+**View test runs:** [GitHub Actions](https://github.com/DarshanHari19/AI-travel-assistant/actions)
+
+### Local Testing
 
 **Run all tests:**
 ```bash
 # From project root
 bash run_tests.sh
-```
 
-Or test individually:
-
-**Backend tests:**
-```bash
+# Or with pytest directly
 cd backend-agent
-pytest test_comprehensive.py -v
-```
-
-**MCP server tests:**
-```bash
-cd mcp-server
-pytest test_comprehensive.py -v
+pytest -v
 ```
 
 **Test categories:**
-- `pytest -m unit` - Fast unit tests (default)
-- `pytest -m integration` - Integration tests (requires real API keys)
-- `pytest -m performance` - Performance tests
+- `pytest -m unit` - Fast unit tests (no external APIs)
+- `pytest -m integration` - Integration tests (requires API keys)
+- `pytest -m performance` - Performance and load tests
+
+**Production feature tests:**
+```bash
+cd backend-agent
+python test_production_features.py
+```
 
 **Coverage report:**
 ```bash
 pytest --cov=. --cov-report=html
+open htmlcov/index.html
 ```
 
-### Legacy Interactive Testing
+### Manual Testing
 
 **Run automated tests:**
 ```bash
