@@ -14,7 +14,7 @@ load_dotenv()
 BASE_URL = "http://localhost:8000"
 
 
-async def test_chat(message: str, session_id: str = "test_session"):
+async def send_chat_message(message: str, session_id: str = "test_session"):
     """
     Send a test message to the chat endpoint
     
@@ -48,7 +48,7 @@ async def test_chat(message: str, session_id: str = "test_session"):
             print(f"\n❌ ERROR: {str(e)}")
 
 
-async def test_health():
+async def check_health():
     """Check the health status of the service"""
     print("\nChecking service health...")
     
@@ -70,7 +70,7 @@ async def run_tests():
     """Run a suite of test queries"""
     
     # Check health first
-    await test_health()
+    await check_health()
     
     # Test queries
     test_queries = [
@@ -86,7 +86,7 @@ async def run_tests():
     print("="*80)
     
     for i, query in enumerate(test_queries, 1):
-        await test_chat(query, session_id=f"test_session_{i}")
+        await send_chat_message(query, session_id=f"test_session_{i}")
         await asyncio.sleep(1)  # Brief pause between requests
 
 
@@ -108,7 +108,7 @@ async def interactive_mode():
             if not user_input:
                 continue
                 
-            await test_chat(user_input, session_id="interactive")
+            await send_chat_message(user_input, session_id="interactive")
             
         except KeyboardInterrupt:
             print("\n\nGoodbye!")
@@ -136,7 +136,7 @@ async def main():
     
     if args.message:
         # Single message mode
-        await test_chat(args.message)
+        await send_chat_message(args.message)
     elif args.mode == 'interactive':
         # Interactive mode
         await interactive_mode()
