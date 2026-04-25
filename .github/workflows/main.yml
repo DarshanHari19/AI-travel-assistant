@@ -1,0 +1,95 @@
+name: Test Suite
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Run Tests (Python 3.11)
+    runs-on: ubuntu-latest
+    
+    # PostgreSQL service for persistent storage tests
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: travel_assistant
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'backend-agent/requirements.txt'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend-agent/requirements.txt
+
+      - name: Verify PostgreSQL connection
+        env:
+          POSTGRES_URI: postgresql://postgres:postgres@localhost:5432/travel_assistant
+        run: |
+          echo "Testing PostgreSQL connection..."
+          timeout 30 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done'
+          echo "✓ PostgreSQL is ready!"
+
+      - name: Run pytest tests
+        env:
+          # API Keys from GitHub Secrets
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AERODATABOX_API_KEY: ${{ secrets.AERODATABOX_API_KEY }}
+          
+          # PostgreSQL configuration
+          POSTGRES_URI: postgresql://postgres:postgres@localhost:5432/travel_assistant
+          POSTGRES_POOL_SIZE: 5
+          POSTGRES_MAX_OVERFLOW: 10
+          
+          # Test environment settings
+          ENVIRONMENT: test
+          ENABLE_CORS: true
+          ALLOWED_ORIGINS: "*"
+        run: |
+          cd backend-agent
+          pytest -v --tb=short --disable-warnings
+        continue-on-error: false
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            backend-agent/.pytest_cache/
+            backend-agent/htmlcov/
+          retention-days: 7
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Python Version:** 3.11" >> $GITHUB_STEP_SUMMARY
+          echo "- **PostgreSQL:** Running (postgres:16-alpine)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Directory:** backend-agent/" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
