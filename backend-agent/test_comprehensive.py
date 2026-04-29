@@ -24,6 +24,27 @@ os.environ["OPENAI_MODEL"] = "gpt-4o"
 from agent import app, create_travel_agent
 from mcp_server import WeatherForecastResponse, ErrorResponse, DayForecast
 
+# Mock the agent globally for TestClient (lifespan doesn't run with TestClient)
+@pytest.fixture(autouse=True)
+def mock_agent():
+    """Mock the global travel agent for all tests"""
+    from unittest.mock import MagicMock
+    import agent
+    
+    # Create a mock agent
+    mock_agent_instance = MagicMock()
+    mock_agent_instance.ainvoke = AsyncMock(return_value={
+        "messages": [MagicMock(content="This is a test response from the travel assistant.")]
+    })
+    
+    # Set it globally
+    agent.travel_agent = mock_agent_instance
+    
+    yield mock_agent_instance
+    
+    # Cleanup
+    agent.travel_agent = None
+
 client = TestClient(app)
 
 
@@ -168,9 +189,14 @@ def test_chat_endpoint_default_session_id():
 @pytest.mark.asyncio
 async def test_create_travel_agent_initializes():
     """Test that agent creation doesn't raise errors"""
+    from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+    
     try:
-        agent = create_travel_agent()
-        assert agent is not None
+        # Create a temporary in-memory SQLite checkpointer for testing
+        async with AsyncSqliteSaver.from_conn_string(":memory:") as memory:
+            await memory.setup()
+            agent = create_travel_agent(memory)
+            assert agent is not None
     except Exception as e:
         pytest.fail(f"Agent creation failed: {str(e)}")
 
@@ -180,7 +206,7 @@ async def test_create_travel_agent_initializes():
 # ============================================================================
 
 @pytest.mark.asyncio
-@patch('server.fetch_weather_data')
+@patch('mcp_server.server.fetch_weather_data')
 async def test_weather_tool_success(mock_fetch):
     """Test successful weather tool execution"""
     # Mock weather data response with correct structure
@@ -215,7 +241,7 @@ async def test_weather_tool_success(mock_fetch):
 
 
 @pytest.mark.asyncio
-@patch('server.fetch_weather_data')
+@patch('mcp_server.server.fetch_weather_data')
 async def test_weather_tool_handles_errors(mock_fetch):
     """Test that weather tool handles API errors gracefully"""
     from fastapi import HTTPException
