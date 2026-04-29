@@ -19,6 +19,9 @@ openai>=1.10.0
 psycopg>=3.1.0
 psycopg-pool>=3.1.0
 
+# Redis dependency (for MCP server caching)
+redis>=5.0.0
+
 # Vector store dependencies
 faiss-cpu>=1.7.4
 tiktoken>=0.5.0
