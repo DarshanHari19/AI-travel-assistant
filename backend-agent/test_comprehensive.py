@@ -276,12 +276,10 @@ def test_cors_headers_present():
 # Error Handling Tests
 # ============================================================================
 
-@patch('agent.create_travel_agent')
-def test_chat_handles_agent_errors(mock_create_agent):
+def test_chat_handles_agent_errors(mock_agent):
     """Test that agent errors are handled gracefully"""
-    mock_agent = AsyncMock()
+    # Override the mock to raise an exception
     mock_agent.ainvoke.side_effect = Exception("LLM API Error")
-    mock_create_agent.return_value = mock_agent
     
     response = client.post("/chat", json={
         "message": "Test message",
@@ -323,16 +321,9 @@ def test_full_integration_chat():
 # ============================================================================
 
 @pytest.mark.performance
-@patch('agent.create_travel_agent')
-def test_concurrent_requests(mock_create_agent):
+def test_concurrent_requests(mock_agent):
     """Test that multiple concurrent requests are handled"""
     import concurrent.futures
-    
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {
-        "messages": [MagicMock(content="Response")]
-    }
-    mock_create_agent.return_value = mock_agent
     
     def make_request(i):
         return client.post("/chat", json={
@@ -340,11 +331,13 @@ def test_concurrent_requests(mock_create_agent):
             "session_id": f"session_{i}"
         })
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        responses = list(executor.map(make_request, range(10)))
+    # Test with 5 concurrent requests (under rate limit of 10/min)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        responses = list(executor.map(make_request, range(5)))
     
     # All requests should succeed
     assert all(r.status_code == 200 for r in responses)
+    assert len(responses) == 5
 
 
 if __name__ == "__main__":
