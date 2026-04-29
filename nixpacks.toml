@@ -3,7 +3,7 @@ nixPkgs = ["python39"]
 
 [phases.install]
 cmds = [
-  "pip install -r backend-agent/requirements.txt"
+  "python -m pip install -r backend-agent/requirements.txt"
 ]
 
 [start]
