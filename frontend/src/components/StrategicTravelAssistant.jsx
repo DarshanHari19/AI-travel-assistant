@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 
+// Get API URL from environment variable (Vite uses import.meta.env)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const StrategicTravelAssistant = () => {
   // State management
   const [messages, setMessages] = useState([
@@ -12,10 +15,54 @@ const StrategicTravelAssistant = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => `session_${Date.now()}`);
+  const [inputError, setInputError] = useState('');
   
   // Ref for auto-scrolling
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Input validation function
+  const validateInput = (message) => {
+    // Length checks
+    if (message.length === 0) {
+      return 'Message cannot be empty';
+    }
+    if (message.length > 2000) {
+      return 'Message is too long (max 2000 characters)';
+    }
+
+    // Check for suspicious patterns (prompt injection attempts)
+    const injectionPatterns = [
+      /ignore\s+(previous|all|prior)\s+instructions?/i,
+      /ignore\s+all\s+previous/i,
+      /new\s+instructions?:/i,
+      /system:/i,
+      /(^|\s)assistant:/i,
+      /<\|im_start\|>/i,
+      /<\|im_end\|>/i,
+      /\[SYSTEM\]/i,
+      /\[INST\]/i,
+    ];
+
+    for (const pattern of injectionPatterns) {
+      if (pattern.test(message)) {
+        return 'Message contains potentially unsafe content. Please rephrase your question.';
+      }
+    }
+
+    // Check for excessive special characters (might indicate injection attempt)
+    const specialCharCount = (message.match(/[!@#$%^&*(){}[\]]/g) || []).length;
+    if (specialCharCount > 20) {
+      return 'Message contains too many special characters. Please use normal text.';
+    }
+
+    // Check for repetitive character spam
+    if (/(.)\1{20,}/.test(message)) {
+      return 'Message contains suspicious repetitive patterns.';
+    }
+
+    return null; // Valid input
+  };
 
   // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
@@ -36,6 +83,16 @@ const StrategicTravelAssistant = () => {
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
+    
+    // Validate input
+    const validationError = validateInput(userMessage);
+    if (validationError) {
+      setInputError(validationError);
+      return;
+    }
+
+    // Clear any previous errors
+    setInputError('');
     setInput('');
 
     // Add user message to chat
@@ -43,8 +100,8 @@ const StrategicTravelAssistant = () => {
     setIsLoading(true);
 
     try {
-      // POST to backend API
-      const response = await axios.post('http://localhost:8000/chat', {
+      // POST to backend API (uses environment-based URL)
+      const response = await axios.post(`${API_URL}/chat`, {
         message: userMessage,
         session_id: sessionId
       });
@@ -57,12 +114,34 @@ const StrategicTravelAssistant = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       
+      // Handle different error types
+      let errorMessage = 'I apologize, but I encountered an error. Please try again.';
+      
+      if (error.response) {
+        // Handle specific HTTP status codes
+        if (error.response.status === 429) {
+          errorMessage = '⏰ Rate limit exceeded. Please wait a moment before sending more messages.';
+        } else if (error.response.status === 400) {
+          errorMessage = `⚠️ ${error.response.data?.message || error.response.data?.detail || 'Invalid request. Please check your input.'}`;
+        } else if (error.response.status === 504) {
+          errorMessage = '⏱️ The request timed out. Please try again with a simpler query.';
+        } else if (error.response.status === 503) {
+          errorMessage = '🔧 The service is temporarily unavailable. Please try again in a moment.';
+        } else if (error.response.data?.message) {
+          errorMessage = `❌ ${error.response.data.message}`;
+        } else if (error.response.data?.detail) {
+          errorMessage = `❌ ${error.response.data.detail}`;
+        }
+      } else if (error.request) {
+        errorMessage = '🌐 Unable to reach the server. Please check your connection.';
+      }
+      
       // Add error message to chat
       setMessages(prev => [
         ...prev,
         {
           role: 'assistant',
-          content: `I apologize, but I encountered an error: ${error.response?.data?.detail || error.message}. Please try again.`
+          content: errorMessage
         }
       ]);
     } finally {
@@ -231,29 +310,45 @@ const StrategicTravelAssistant = () => {
       {/* Input Area */}
       <div className="bg-white shadow-lg rounded-b-2xl border-t border-executive-slate-200">
         <div className="px-6 py-5">
+          {/* Error message display */}
+          {inputError && (
+            <div className="mb-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center space-x-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <span>{inputError}</span>
+            </div>
+          )}
+          
           <div className="flex space-x-4">
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // Clear error when user starts typing
+                  if (inputError) setInputError('');
+                }}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask about weather, packing tips, flight delays..."
                 disabled={isLoading}
                 rows="1"
-                className="w-full px-5 py-3 bg-executive-slate-50 border border-executive-slate-300 rounded-xl 
+                className={`w-full px-5 py-3 bg-executive-slate-50 border rounded-xl 
                          text-executive-slate-900 placeholder-executive-slate-400
                          focus:outline-none focus:ring-2 focus:ring-executive-indigo-500 focus:border-transparent
                          disabled:opacity-50 disabled:cursor-not-allowed
-                         resize-none transition-all duration-200"
+                         resize-none transition-all duration-200
+                         ${inputError ? 'border-red-300 focus:ring-red-500' : 'border-executive-slate-300'}`}
                 style={{ minHeight: '52px', maxHeight: '150px' }}
                 onInput={(e) => {
                   e.target.style.height = 'auto';
                   e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
                 }}
               />
-              <div className="absolute right-3 bottom-3 text-xs text-executive-slate-400">
-                Press Enter to send
+              <div className="absolute right-3 bottom-3 text-xs text-executive-slate-400 flex items-center space-x-2">
+                <span className="text-executive-slate-300">{input.length}/2000</span>
+                <span>• Press Enter to send</span>
               </div>
             </div>
             <button
