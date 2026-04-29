@@ -5,6 +5,14 @@ Tests the backend agent, API endpoints, and integration with MCP server
 
 import pytest
 import os
+import sys
+from pathlib import Path
+
+# Add parent directory to path for mcp_server imports
+parent_dir = Path(__file__).parent.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock, AsyncMock
 
@@ -14,7 +22,7 @@ os.environ["OPENWEATHER_API_KEY"] = "test-weather-key-1234567890"
 os.environ["OPENAI_MODEL"] = "gpt-4o"
 
 from agent import app, create_travel_agent
-from server import WeatherForecastResponse, ErrorResponse, DayForecast
+from mcp_server import WeatherForecastResponse, ErrorResponse, DayForecast
 
 client = TestClient(app)
 
