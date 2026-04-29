@@ -83,6 +83,14 @@ class Config:
         # OpenWeatherMap Configuration
         self.OPENWEATHER_API_KEY = env_vars["OPENWEATHER_API_KEY"]
         
+        # PostgreSQL Configuration (for conversation memory persistence)
+        self.POSTGRES_URI = os.getenv(
+            "POSTGRES_URI",
+            "postgresql://postgres:postgres@localhost:5432/travel_assistant"
+        )
+        self.POSTGRES_POOL_SIZE = int(os.getenv("POSTGRES_POOL_SIZE", "10"))
+        self.POSTGRES_MAX_OVERFLOW = int(os.getenv("POSTGRES_MAX_OVERFLOW", "20"))
+        
         # Server Configuration
         self.PORT = int(os.getenv("PORT", "8000"))
         self.HOST = os.getenv("HOST", "0.0.0.0")
@@ -98,6 +106,7 @@ class Config:
         logger.info("Configuration loaded successfully")
         logger.info(f"OpenAI Model: {self.OPENAI_MODEL}")
         logger.info(f"Server Port: {self.PORT}")
+        logger.info(f"PostgreSQL Pool Size: {self.POSTGRES_POOL_SIZE}")
         logger.info(f"CORS Enabled: {self.ENABLE_CORS}")
     
     def __repr__(self) -> str:

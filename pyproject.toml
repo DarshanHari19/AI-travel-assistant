@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-travel-assistant"
+version = "1.0.0"
+description = "Production-ready AI Travel Assistant with Redis caching, RAG, and MCP tools"
+authors = [{name = "Your Name"}]
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+dependencies = [
+    # Core AI/ML
+    "langchain>=0.1.0",
+    "langchain-openai>=0.0.5",
+    "langchain-community>=0.0.20",
+    "langgraph>=0.0.20",
+    "langgraph-checkpoint-postgres>=1.0.0",
+    "openai>=1.6.1",
+    "faiss-cpu>=1.7.4",
+    
+    # Database & Caching  
+    "psycopg>=3.1.0",
+    "psycopg-pool>=3.1.0",
+    "redis>=5.0.0",
+    
+    # Web Framework
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "slowapi>=0.1.9",
+    
+    # MCP & Tools
+    "mcp>=0.9.0",
+    "httpx>=0.26.0",
+    
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "black>=24.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["backend-agent*", "mcp-server*", "frontend*"]
+
+# Configure black (code formatter)
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+# Configure ruff (linter)
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [".git", ".venv", "venv", "__pycache__", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = []
+
+# Configure pytest
+[tool.pytest.ini_options]
+testpaths = ["backend-agent", "mcp-server"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+asyncio_mode = "auto"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "integration: Integration tests requiring external services",
+    "unit: Unit tests",
+    "slow: Slow-running tests",
+]

@@ -5,6 +5,14 @@ Tests the backend agent, API endpoints, and integration with MCP server
 
 import pytest
 import os
+import sys
+from pathlib import Path
+
+# Add parent directory to path for mcp_server imports
+parent_dir = Path(__file__).parent.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock, AsyncMock
 
@@ -14,7 +22,28 @@ os.environ["OPENWEATHER_API_KEY"] = "test-weather-key-1234567890"
 os.environ["OPENAI_MODEL"] = "gpt-4o"
 
 from agent import app, create_travel_agent
-from server import WeatherForecastResponse, ErrorResponse, DayForecast
+from mcp_server import WeatherForecastResponse, ErrorResponse, DayForecast
+
+# Mock the agent globally for TestClient (lifespan doesn't run with TestClient)
+@pytest.fixture(autouse=True)
+def mock_agent():
+    """Mock the global travel agent for all tests"""
+    from unittest.mock import MagicMock
+    import agent
+    
+    # Create a mock agent
+    mock_agent_instance = MagicMock()
+    mock_agent_instance.ainvoke = AsyncMock(return_value={
+        "messages": [MagicMock(content="This is a test response from the travel assistant.")]
+    })
+    
+    # Set it globally
+    agent.travel_agent = mock_agent_instance
+    
+    yield mock_agent_instance
+    
+    # Cleanup
+    agent.travel_agent = None
 
 client = TestClient(app)
 
@@ -160,9 +189,14 @@ def test_chat_endpoint_default_session_id():
 @pytest.mark.asyncio
 async def test_create_travel_agent_initializes():
     """Test that agent creation doesn't raise errors"""
+    from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+    
     try:
-        agent = create_travel_agent()
-        assert agent is not None
+        # Create a temporary in-memory SQLite checkpointer for testing
+        async with AsyncSqliteSaver.from_conn_string(":memory:") as memory:
+            await memory.setup()
+            agent = create_travel_agent(memory)
+            assert agent is not None
     except Exception as e:
         pytest.fail(f"Agent creation failed: {str(e)}")
 
@@ -172,7 +206,7 @@ async def test_create_travel_agent_initializes():
 # ============================================================================
 
 @pytest.mark.asyncio
-@patch('server.fetch_weather_data')
+@patch('mcp_server.server.fetch_weather_data')
 async def test_weather_tool_success(mock_fetch):
     """Test successful weather tool execution"""
     # Mock weather data response with correct structure
@@ -207,7 +241,7 @@ async def test_weather_tool_success(mock_fetch):
 
 
 @pytest.mark.asyncio
-@patch('server.fetch_weather_data')
+@patch('mcp_server.server.fetch_weather_data')
 async def test_weather_tool_handles_errors(mock_fetch):
     """Test that weather tool handles API errors gracefully"""
     from fastapi import HTTPException
@@ -242,12 +276,10 @@ def test_cors_headers_present():
 # Error Handling Tests
 # ============================================================================
 
-@patch('agent.create_travel_agent')
-def test_chat_handles_agent_errors(mock_create_agent):
+def test_chat_handles_agent_errors(mock_agent):
     """Test that agent errors are handled gracefully"""
-    mock_agent = AsyncMock()
+    # Override the mock to raise an exception
     mock_agent.ainvoke.side_effect = Exception("LLM API Error")
-    mock_create_agent.return_value = mock_agent
     
     response = client.post("/chat", json={
         "message": "Test message",
@@ -289,16 +321,9 @@ def test_full_integration_chat():
 # ============================================================================
 
 @pytest.mark.performance
-@patch('agent.create_travel_agent')
-def test_concurrent_requests(mock_create_agent):
+def test_concurrent_requests(mock_agent):
     """Test that multiple concurrent requests are handled"""
     import concurrent.futures
-    
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke.return_value = {
-        "messages": [MagicMock(content="Response")]
-    }
-    mock_create_agent.return_value = mock_agent
     
     def make_request(i):
         return client.post("/chat", json={
@@ -306,11 +331,13 @@ def test_concurrent_requests(mock_create_agent):
             "session_id": f"session_{i}"
         })
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        responses = list(executor.map(make_request, range(10)))
+    # Test with 5 concurrent requests (under rate limit of 10/min)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        responses = list(executor.map(make_request, range(5)))
     
     # All requests should succeed
     assert all(r.status_code == 200 for r in responses)
+    assert len(responses) == 5
 
 
 if __name__ == "__main__":
