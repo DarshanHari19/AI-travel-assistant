@@ -67,7 +67,8 @@ async def lifespan(app: FastAPI):
     global memory, travel_agent, pool
     
     # Startup: Initialize PostgreSQL connection pool and checkpointer
-    logger.info(f"Connecting to PostgreSQL: {config.POSTGRES_URI.split('@')[1]}")
+    postgres_host = config.POSTGRES_URI.split('@')[1] if '@' in config.POSTGRES_URI else "localhost"
+    logger.info(f"Connecting to PostgreSQL: {postgres_host}")
     
     # Create async connection pool
     pool = AsyncConnectionPool(
