@@ -4,6 +4,10 @@ import axios from 'axios';
 // Get API URL from environment variable (Vite uses import.meta.env)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// Debug: Log API URL on component load (build verification)
+console.log('Travel Assistant - API URL configured:', API_URL);
+console.log('Environment check - VITE_API_URL:', import.meta.env.VITE_API_URL);
+
 const StrategicTravelAssistant = () => {
   // State management
   const [messages, setMessages] = useState([
