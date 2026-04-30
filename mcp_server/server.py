@@ -88,6 +88,7 @@ class FlightStatusResponse(BaseModel):
     destination: str = Field(description="Destination airport code")
     terminal: Optional[str] = Field(default=None, description="Terminal information")
     gate: Optional[str] = Field(default=None, description="Gate information")
+    is_mock_data: bool = Field(default=False, description="True if this is mock/demo data, False if real API data")
 
 
 # ============================================================================
@@ -407,7 +408,8 @@ def generate_mock_flight_status(flight_number: str) -> FlightStatusResponse:
         origin=origin,
         destination=destination,
         terminal=f"T{random.randint(1, 5)}",
-        gate=f"{random.choice(['A', 'B', 'C', 'D'])}{random.randint(1, 30)}"
+        gate=f"{random.choice(['A', 'B', 'C', 'D'])}{random.randint(1, 30)}",
+        is_mock_data=True  # Mark this as mock data
     )
 
 

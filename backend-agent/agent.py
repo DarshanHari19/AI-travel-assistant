@@ -302,7 +302,14 @@ async def check_flight_status(flight_number: str) -> dict:
         # Convert Pydantic model to dict
         flight_data = result.model_dump()
         flight_data["error"] = False
-        logger.info(f"Successfully fetched flight status for {flight_number}")
+        
+        # Warn if this is mock data
+        if flight_data.get("is_mock_data", False):
+            flight_data["warning"] = "⚠️ DEMO DATA: Real-time flight API not configured. This is simulated data for demonstration purposes only."
+            logger.warning(f"Returning MOCK flight data for {flight_number} - API not configured")
+        else:
+            logger.info(f"Successfully fetched REAL flight status for {flight_number}")
+            
         return flight_data
     
     except Exception as e:
@@ -433,7 +440,7 @@ AVAILABLE INTELLIGENCE TOOLS:
    - Checking connection feasibility
    - Assessing travel disruption risk
    
-   **Note:** May use mock data if API unavailable - clearly state this
+   **IMPORTANT:** If the response contains a 'warning' field, you MUST inform the user that the flight data is demo/simulated (not real-time). Say something like: "Note: Since the flight API isn't configured, I'm showing simulated data for demonstration purposes."
 
 STRATEGIC WORKFLOW EXAMPLES:
 
