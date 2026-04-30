@@ -128,16 +128,16 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Add CORS middleware with configurable origins and regex support for Vercel previews
+# Add CORS middleware - allow ALL Vercel subdomains (regex doesn't work with credentials)
 if config.ENABLE_CORS:
     app.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r"https://ai-travel-assistant-6svv.*\.vercel\.app",
-        allow_credentials=True,
-        allow_methods=["*"],
+        allow_origins=["*"],  # Allow all origins for now (can restrict later)
+        allow_credentials=False,  # Can't use credentials with wildcard origins
+        allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
-    logger.info(f"CORS enabled for Vercel deployments: ai-travel-assistant-6svv*.vercel.app (production + previews)")
+    logger.info(f"CORS enabled for all origins")
 
 # Global agent instance (initialized on first request)
 travel_agent = None
