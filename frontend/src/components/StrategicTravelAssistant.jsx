@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 
 // Get API URL from environment variable (Vite uses import.meta.env)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// TEMPORARY: Hardcoded for debugging environment variable issues
+const API_URL = import.meta.env.VITE_API_URL || 'https://ai-travel-assistant-production.up.railway.app';
 
 // Debug: Log API URL on component load (build verification)
 console.log('Travel Assistant - API URL configured:', API_URL);
