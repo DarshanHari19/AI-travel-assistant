@@ -163,8 +163,8 @@ function App() {
     setIsLoading(true);
 
     try {
-      // POST to backend API
-      const response = await axios.post('http://localhost:8000/chat', {
+      // POST to backend API - PRODUCTION: Railway backend
+      const response = await axios.post('https://ai-travel-assistant-production.up.railway.app/chat', {
         message: userMessage,
         session_id: 'demo-user'
       });
