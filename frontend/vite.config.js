@@ -8,10 +8,10 @@ export default defineConfig({
     // Force new bundle generation - disable rollup cache
     rollupOptions: {
       output: {
-        // Add timestamp to force cache invalidation
-        assetFileNames: 'assets/[name]-[hash]-v2.[ext]',
-        chunkFileNames: 'assets/[name]-[hash]-v2.js',
-        entryFileNames: 'assets/[name]-[hash]-v2.js',
+        // Change to v3 to force complete rebuild
+        assetFileNames: 'assets/[name]-[hash]-v3.[ext]',
+        chunkFileNames: 'assets/[name]-[hash]-v3.js',
+        entryFileNames: 'assets/[name]-[hash]-v3.js',
       },
     },
   },
