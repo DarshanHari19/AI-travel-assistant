@@ -59,12 +59,13 @@ if not config:
 travel_agent = None
 memory = None
 pool = None
+checkpointer = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for app startup and shutdown"""
-    global memory, travel_agent, pool
+    global memory, travel_agent, pool, checkpointer
     
     # Startup: Initialize PostgreSQL connection pool and checkpointer
     postgres_host = config.POSTGRES_URI.split('@')[1] if '@' in config.POSTGRES_URI else "localhost"
@@ -82,8 +83,9 @@ async def lifespan(app: FastAPI):
     await pool.open()
     logger.info(f"PostgreSQL connection pool initialized (size: {config.POSTGRES_POOL_SIZE})")
     
-    # Initialize PostgreSQL checkpointer WITHOUT context manager to keep connections alive
-    memory = AsyncPostgresSaver.from_conn_string(config.POSTGRES_URI)
+    # Initialize PostgreSQL checkpointer - properly enter context manager
+    checkpointer = AsyncPostgresSaver.from_conn_string(config.POSTGRES_URI)
+    memory = await checkpointer.__aenter__()
     
     # Setup database schema (creates tables if they don't exist)
     await memory.setup()
@@ -106,8 +108,8 @@ async def lifespan(app: FastAPI):
     
     # Shutdown: Cleanup memory saver and connection pool
     logger.info("Shutting down agent and closing PostgreSQL connections")
-    if memory:
-        await memory.__aexit__(None, None, None)
+    if memory and checkpointer:
+        await checkpointer.__aexit__(None, None, None)
         logger.info("AsyncPostgresSaver closed")
     if pool:
         await pool.close()
