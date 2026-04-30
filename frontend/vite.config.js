@@ -5,13 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    // Force new bundle generation - disable rollup cache
+    // Force v4 bundle - FINAL attempt to bypass cache
     rollupOptions: {
       output: {
-        // Change to v3 to force complete rebuild
-        assetFileNames: 'assets/[name]-[hash]-v3.[ext]',
-        chunkFileNames: 'assets/[name]-[hash]-v3.js',
-        entryFileNames: 'assets/[name]-[hash]-v3.js',
+        // v4 - includes Railway URL hardcoded
+        assetFileNames: 'assets/[name]-[hash]-v4-final.[ext]',
+        chunkFileNames: 'assets/[name]-[hash]-v4-final.js',
+        entryFileNames: 'assets/[name]-[hash]-v4-final.js',
       },
     },
   },
