@@ -82,29 +82,33 @@ async def lifespan(app: FastAPI):
     await pool.open()
     logger.info(f"PostgreSQL connection pool initialized (size: {config.POSTGRES_POOL_SIZE})")
     
-    # Initialize PostgreSQL checkpointer
-    async with AsyncPostgresSaver.from_conn_string(config.POSTGRES_URI) as mem:
-        memory = mem
-        
-        # Setup database schema (creates tables if they don't exist)
-        await memory.setup()
-        logger.info("AsyncPostgresSaver initialized for conversation checkpointing")
-        
-        # Initialize RAG vector store (CRITICAL: must succeed or searches will fail)
-        try:
-            vector_store = initialize_vector_store(api_key=config.OPENAI_API_KEY)
-            if vector_store is None:
-                raise RuntimeError("Vector store initialization returned None")
-            logger.info("RAG vector store initialized successfully")
-        except Exception as e:
-            logger.error(f"CRITICAL: Failed to initialize RAG vector store: {e}", exc_info=True)
-            raise RuntimeError(f"RAG initialization failed: {e}") from e
-        
-        travel_agent = create_travel_agent(memory)
-        yield
+    # Initialize PostgreSQL checkpointer WITHOUT context manager to keep connections alive
+    memory = AsyncPostgresSaver.from_conn_string(config.POSTGRES_URI)
     
-    # Shutdown: Cleanup connection pool
-    logger.info("Shutting down agent and closing PostgreSQL pool")
+    # Setup database schema (creates tables if they don't exist)
+    await memory.setup()
+    logger.info("AsyncPostgresSaver initialized for conversation checkpointing")
+    
+    # Initialize RAG vector store (CRITICAL: must succeed or searches will fail)
+    try:
+        vector_store = initialize_vector_store(api_key=config.OPENAI_API_KEY)
+        if vector_store is None:
+            raise RuntimeError("Vector store initialization returned None")
+        logger.info("RAG vector store initialized successfully")
+    except Exception as e:
+        logger.error(f"CRITICAL: Failed to initialize RAG vector store: {e}", exc_info=True)
+        raise RuntimeError(f"RAG initialization failed: {e}") from e
+    
+    travel_agent = create_travel_agent(memory)
+    
+    # Yield to keep connections alive during app lifetime
+    yield
+    
+    # Shutdown: Cleanup memory saver and connection pool
+    logger.info("Shutting down agent and closing PostgreSQL connections")
+    if memory:
+        await memory.__aexit__(None, None, None)
+        logger.info("AsyncPostgresSaver closed")
     if pool:
         await pool.close()
         logger.info("PostgreSQL connection pool closed")
