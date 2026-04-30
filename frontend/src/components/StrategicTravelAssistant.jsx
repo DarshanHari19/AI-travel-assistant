@@ -3,11 +3,13 @@ import axios from 'axios';
 
 // Get API URL from environment variable (Vite uses import.meta.env)
 // TEMPORARY: Hardcoded for debugging environment variable issues
+// Build v3 - Force cache bust
 const API_URL = import.meta.env.VITE_API_URL || 'https://ai-travel-assistant-production.up.railway.app';
 
 // Debug: Log API URL on component load (build verification)
 console.log('Travel Assistant - API URL configured:', API_URL);
 console.log('Environment check - VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('Build version: v3');
 
 const StrategicTravelAssistant = () => {
   // State management
