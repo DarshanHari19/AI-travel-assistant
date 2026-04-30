@@ -7,7 +7,16 @@
 [![LangChain](https://img.shields.io/badge/🦜_LangChain-equipped-green.svg)](https://python.langchain.com/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a393.svg)](https://fastapi.tiangolo.com/)
 
-A production-ready AI-powered travel assistant with real-time weather data, flight tracking, Redis caching, strategic airport intelligence, and intelligent travel recommendations. Built with LangChain, GPT-4, PostgreSQL, Redis, and automated testing via GitHub Actions.
+A production-ready AI-powered travel assistant with real-time weather data, Redis caching, strategic airport intelligence, and intelligent travel recommendations. Built with LangChain, GPT-4, PostgreSQL, and deployed to production with full CI/CD.
+
+## 🚀 **[Try Live Demo](https://ai-travel-assistant-6svv.vercel.app/)** ← Click to test!
+
+**Try asking:**
+- "What's the weather in Tokyo?"
+- "Packing list for Paris in spring"
+- "I have a 75-minute layover at JFK from Terminal 4 to Terminal 5 - is that enough time?"
+
+**Backend API:** https://ai-travel-assistant-production.up.railway.app/health
 
 ## ✨ Features
 
@@ -22,6 +31,27 @@ A production-ready AI-powered travel assistant with real-time weather data, flig
 - 📊 **Multi-Source RAG**: FAISS vector store with city guides + airport logistics
 - 🎨 **Modern UI**: React frontend with Tailwind CSS
 - 📦 **Clean Architecture**: Proper Python packaging (pyproject.toml), no path hacks
+
+## 🛠️ Tech Stack
+
+**Frontend (Vercel)**
+- React 18 + Vite
+- Tailwind CSS for styling
+- Axios for API calls
+
+**Backend (Railway)**
+- Python 3.11 + FastAPI
+- LangChain + LangGraph for AI orchestration
+- OpenAI GPT-4 for intelligence
+- PostgreSQL (Neon) for conversation persistence
+- Redis (Upstash) for caching layer
+- FAISS for vector search (RAG)
+
+**DevOps & Testing**
+- GitHub Actions CI/CD with 18 automated tests
+- Docker containerization
+- Production monitoring & health checks
+- Rate limiting & CORS security
 
 ## 🏗️ Architecture
 
@@ -78,19 +108,18 @@ inmarket-ai-builder-challenge/
     └── README.md          # Frontend documentation
 ```
 
-## 🚀 Quick Start
+## � Local Development (Optional)
+
+> **Note:** The application is already deployed and accessible at the [live demo](https://ai-travel-assistant-6svv.vercel.app/). Local setup is only needed if you want to run it yourself or contribute to the codebase.
 
 ### Prerequisites
 
 - Python 3.11 or higher
-- Node.js 16+ (for frontend)
+- Node.js 18+ (for frontend)
 - PostgreSQL 16+ (for conversation persistence)
-- **Redis 7+ (for production caching - NEW)**
+- Redis 7+ (for caching)
 - OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
 - OpenWeatherMap API key ([Get one here](https://openweathermap.org/api))
-- AeroDataBox API key (optional - [RapidAPI](https://rapidapi.com/aerodatabox/api/aerodatabox))
-
-> **🆕 Production Enhancements**: This project includes Redis caching, airport intelligence RAG, and clean package structure. See [QUICKSTART.md](QUICKSTART.md) for details.
 
 ### Installation
 
@@ -100,14 +129,18 @@ git clone https://github.com/DarshanHari19/AI-travel-assistant.git
 cd AI-travel-assistant
 ```
 
-2. **Set up PostgreSQL (One-command setup):**
+2. **Set up PostgreSQL:**
 ```bash
-./setup_postgres.sh
+# Using Docker (recommended)
+docker run -d -p 5432:5432 \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=travel_assistant \
+  --name travel-postgres \
+  postgres:16-alpine
 ```
 
-This creates a PostgreSQL 16 Docker container with the `travel_assistant` database.
-
-Or install PostgreSQL manually: See [POSTGRESQL_SETUP.md](POSTGRESQL_SETUP.md)
+Or see [POSTGRESQL_SETUP.md](POSTGRESQL_SETUP.md) for manual setup.
 
 **2a. Set up Redis (NEW - Production caching):**
 ```bash
