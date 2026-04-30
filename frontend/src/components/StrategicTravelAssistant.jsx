@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 
 // Get API URL from environment variable (Vite uses import.meta.env)
-// TEMPORARY: Hardcoded for debugging environment variable issues
-// Build v3 - Force cache bust - Build timestamp: 2026-04-30T04:50:00Z
+// PRODUCTION: Railway URL hardcoded as fallback
+// Build v4-final - Last attempt to bypass Vercel cache
 const API_URL = import.meta.env.VITE_API_URL || 'https://ai-travel-assistant-production.up.railway.app';
 
 // Debug: Log API URL on component load (build verification)
 console.log('Travel Assistant - API URL configured:', API_URL);
 console.log('Environment check - VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('Build version: v3-final');
+console.log('Build version: v4-final');
 
 const StrategicTravelAssistant = () => {
   // State management
