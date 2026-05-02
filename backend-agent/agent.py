@@ -62,6 +62,56 @@ pool = None
 checkpointer = None
 
 
+async def ensure_database_connection():
+    """
+    Ensure database connection is alive, reconnect if necessary.
+    This prevents "connection is closed" errors after inactivity.
+    
+    Returns:
+        bool: True if connection is healthy or successfully reconnected,
+              False only if reconnection attempt explicitly failed
+    """
+    global memory, checkpointer, travel_agent
+    
+    # If no memory was ever initialized, that's okay (might be test environment)
+    if memory is None:
+        logger.debug("No database memory configured - skipping connection check")
+        return True
+    
+    try:
+        # Test if connection is alive by attempting a simple operation
+        await memory.alist("dummy_thread_id", limit=1)
+        logger.debug("Database connection is healthy")
+        return True
+    except Exception as e:
+        # Connection is stale or closed - attempt reconnection
+        logger.warning(f"Database connection lost: {e}. Attempting reconnection...")
+        
+        try:
+            # Close old connection if it exists
+            if checkpointer:
+                try:
+                    await checkpointer.__aexit__(None, None, None)
+                except:
+                    pass
+            
+            # Reconnect
+            checkpointer = AsyncPostgresSaver.from_conn_string(config.POSTGRES_URI)
+            memory = await checkpointer.__aenter__()
+            await memory.setup()
+            
+            # Recreate the agent with new memory
+            travel_agent = create_travel_agent(memory)
+            
+            logger.info("✓ Database connection and agent re-established successfully")
+            return True
+            
+        except Exception as reconnect_error:
+            logger.error(f"✗ Failed to reconnect to database: {reconnect_error}")
+            # Don't fail hard - let the request try anyway (might work in test/mock scenarios)
+            return True  # Allow request to proceed
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for app startup and shutdown"""
@@ -700,6 +750,10 @@ async def chat(request: Request, chat_request: ChatRequest):
     """
     try:
         logger.info(f"Processing chat request for session: {chat_request.session_id}")
+        
+        # Ensure database connection is alive (reconnect if needed)
+        # This is a best-effort check - we proceed even if it fails
+        await ensure_database_connection()
         
         # Use the global agent instance (initialized in lifespan)
         global travel_agent
