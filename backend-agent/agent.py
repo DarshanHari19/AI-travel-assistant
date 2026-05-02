@@ -767,13 +767,42 @@ async def chat(request: Request, chat_request: ChatRequest):
         # LangGraph agents use a message-list state format
         # Pass session_id as thread_id to enable conversation persistence
         # Set timeout to prevent hanging requests
-        result = await travel_agent.ainvoke(
-            {"messages": [("user", chat_request.message)]},
-            config={
-                "configurable": {"thread_id": chat_request.session_id},
-                "recursion_limit": 10  # Additional safety against infinite loops
-            }
-        )
+        
+        # Retry logic for database connection errors
+        max_retries = 2
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                result = await travel_agent.ainvoke(
+                    {"messages": [("user", chat_request.message)]},
+                    config={
+                        "configurable": {"thread_id": chat_request.session_id},
+                        "recursion_limit": 10  # Additional safety against infinite loops
+                    }
+                )
+                break  # Success - exit retry loop
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                last_error = e
+                
+                # Check if it's a connection error
+                if "connection is closed" in error_msg or "connection closed" in error_msg:
+                    logger.warning(f"Connection error during agent execution (attempt {attempt +1}/{max_retries}): {e}")
+                    
+                    if attempt < max_retries - 1:
+                        # Try to reconnect
+                        logger.info("Attempting database reconnection...")
+                        await ensure_database_connection()
+                        continue  # Retry
+                    else:
+                        # Final attempt failed
+                        logger.error(f"Failed after {max_retries} attempts with connection errors")
+                        raise
+                else:
+                    # Not a connection error - don't retry
+                    raise
         
         # Extract output from the final message in the result
         response_text = result["messages"][-1].content
